@@ -1,216 +1,295 @@
 import React, { useState } from 'react';
 
 const TaxCalculator = () => {
-  const [activeTab, setActiveTab] = useState('income');
-  const [regime, setRegime] = useState('old');
+  const [activeSection, setActiveSection] = useState('basic');
+  const [financialYear, setFinancialYear] = useState('FY 2023-24');
   const [ageGroup, setAgeGroup] = useState('below60');
 
-  // Separate state for income and deductions
+  // Income state
   const [incomeData, setIncomeData] = useState({
-    salaryIncome: 0,
-    interestIncome: 0,
-    rentalIncome: 0,
-    digitalAssetsIncome: 0,
-    exemptAllowances: 0,
-    homeLoanInterestSelf: 0,
-    homeLoanInterestLetOut: 0,
-    otherIncome: 0,
+    salaryIncome: '',
+    interestIncome: '',
+    rentalIncome: '',
+    digitalAssetsIncome: '',
+    exemptAllowances: '',
+    homeLoanInterestSelf: '',
+    homeLoanInterestLetOut: '',
+    otherIncome: '',
   });
 
+  // Deduction state  
   const [deductionData, setDeductionData] = useState({
-    basicDeductions: 0,
-    medicalInsurance: 0,
-    housingLoanInterest: 0,
-    npsEmployerContribution: 0,
-    npsInterest: 0,
-    charityDonations: 0,
-    npsEmployeeContribution: 0,
-    otherDeductions: 0,
+    basicDeductions: '',
+    depositInterest: '',
+    medicalInsurance: '',
+    charityDonations: '',
+    housingLoanInterest: '',
+    npsEmployeeContribution: '',
+    npsEmployerContribution: '',
+    otherDeductions: '',
   });
 
   const [taxResult, setTaxResult] = useState(null);
+  const [showComparison, setShowComparison] = useState(false);
 
-  // Handle input changes for income
   const handleIncomeChange = (e) => {
     const { name, value } = e.target;
-    setIncomeData({
-      ...incomeData,
-      [name]: Number(value) || 0, // Ensure numeric values
-    });
+    setIncomeData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
-  // Handle input changes for deductions
   const handleDeductionChange = (e) => {
     const { name, value } = e.target;
-    setDeductionData({
-      ...deductionData,
-      [name]: Number(value) || 0, // Ensure numeric values
-    });
+    setDeductionData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
-  // Calculate taxable income
-  const calculateTaxableIncome = () => {
-    const totalIncome = 
-      incomeData.salaryIncome +
-      incomeData.interestIncome +
-      incomeData.rentalIncome +
-      incomeData.digitalAssetsIncome +
-      incomeData.otherIncome;
+  const renderBasicDetails = () => (
+    <div className="space-y-6">
+      <h2 className="text-xl font-semibold">Basic Details</h2>
+      
+      <div className="space-y-2">
+        <label className="block text-gray-700">Financial Year</label>
+        <select 
+          value={financialYear}
+          onChange={(e) => setFinancialYear(e.target.value)}
+          className="w-full p-2 border rounded"
+        >
+          <option value="FY 2023-24">FY 2023-24</option>
+          <option value="FY 2024-25">FY 2024-25</option>
+          <option value="FY 2025-26">FY 2025-26</option>
+        </select>
+      </div>
 
-    const totalDeductions = regime === 'old' 
-      ? deductionData.basicDeductions +
-        deductionData.medicalInsurance +
-        deductionData.housingLoanInterest +
-        deductionData.npsEmployerContribution +
-        deductionData.npsInterest +
-        deductionData.charityDonations +
-        deductionData.npsEmployeeContribution +
-        deductionData.otherDeductions
-      : 0;
+      <div className="space-y-2">
+        <label className="block text-gray-700">Age Group</label>
+        <select
+          value={ageGroup}
+          onChange={(e) => setAgeGroup(e.target.value)}
+          className="w-full p-2 border rounded"
+        >
+          <option value="below60">Below 60 years (Regular Citizen)</option>
+          <option value="between60and80">Between 60-79 years (Senior Citizen)</option>
+          <option value="above80">80 and above (Super Senior Citizen)</option>
+        </select>
+      </div>
 
-    return totalIncome - totalDeductions;
-  };
+      <button
+        onClick={() => setActiveSection('income')}
+        className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600"
+      >
+        Continue
+      </button>
+    </div>
+  );
 
-  // Tax calculation logic for old regime
-  const calculateOldRegimeTax = (income) => {
-    let tax = 0;
-    const exemptionLimit = 
-      ageGroup === 'below60' ? 250000 :
-      ageGroup === 'between60and80' ? 300000 : 500000;
+  const renderIncomeDetails = () => (
+    <div className="space-y-6">
+      <h2 className="text-xl font-semibold">Income Details</h2>
+      
+      <div className="grid grid-cols-2 gap-6">
+        <div className="space-y-4">
+          {Object.entries({
+            salaryIncome: ["Income from Salary", "Salary before reducing HRA, LTA, standard deductions & professional tax. If applicable, reduce leave encashment (max: 25L)"],
+            interestIncome: ["Income from interest", "Includes interest from savings bank, deposits and other interest"],
+            rentalIncome: ["Rental income received", "Annual rent received on let-out property (Standard deduction @30% will be auto calculated)"],
+            digitalAssetsIncome: ["Income from digital assets", "Net Income from Digital Assets, taxed at 30%"]
+          }).map(([key, [label, tooltip]]) => (
+            <div key={key} className="space-y-1">
+              <div className="flex items-center gap-2">
+                <label className="text-gray-700">{label}</label>
+                <div className="relative group">
+                  <span className="cursor-help rounded-full bg-gray-200 px-2 py-0.5">i</span>
+                  <div className="absolute hidden group-hover:block bg-black text-white p-2 rounded w-64 text-sm z-10">
+                    {tooltip}
+                  </div>
+                </div>
+              </div>
+              <div className="relative">
+                <input
+                  type="number"
+                  name={key}
+                  value={incomeData[key]}
+                  onChange={handleIncomeChange}
+                  className="w-full p-2 border rounded"
+                />
+                <div className="absolute right-3 top-2">₹</div>
+              </div>
+            </div>
+          ))}
+        </div>
 
-    if (income <= exemptionLimit) return 0;
+        <div className="space-y-4">
+          {Object.entries({
+            exemptAllowances: ["Exempt allowances", "HRA, LTA, Professional Tax and any Other Exemptions"],
+            homeLoanInterestSelf: ["Interest on home loan - Self occupied", "Interest paid on housing loan taken for self-occupied property"],
+            homeLoanInterestLetOut: ["Interest on Home Loan - Let Out", "Interest paid on housing loan taken for rented/let-out property"],
+            otherIncome: ["Other income", "Includes taxable freelancing income or any other taxable income"]
+          }).map(([key, [label, tooltip]]) => (
+            <div key={key} className="space-y-1">
+              <div className="flex items-center gap-2">
+                <label className="text-gray-700">{label}</label>
+                <div className="relative group">
+                  <span className="cursor-help rounded-full bg-gray-200 px-2 py-0.5">i</span>
+                  <div className="absolute hidden group-hover:block bg-black text-white p-2 rounded w-64 text-sm z-10">
+                    {tooltip}
+                  </div>
+                </div>
+              </div>
+              <div className="relative">
+                <input
+                  type="number"
+                  name={key}
+                  value={incomeData[key]}
+                  onChange={handleIncomeChange}
+                  className="w-full p-2 border rounded"
+                />
+                <div className="absolute right-3 top-2">₹</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
-    const taxable = income - exemptionLimit;
-    if (taxable <= 250000) tax = taxable * 0.05;
-    else if (taxable <= 500000) tax = 12500 + (taxable - 250000) * 0.1;
-    else if (taxable <= 1000000) tax = 62500 + (taxable - 500000) * 0.2;
-    else tax = 112500 + (taxable - 1000000) * 0.3;
+      <div className="flex gap-4">
+        <button
+          onClick={() => setActiveSection('basic')}
+          className="flex-1 bg-gray-500 text-white py-2 rounded hover:bg-gray-600"
+        >
+          Back
+        </button>
+        <button
+          onClick={() => setActiveSection('deductions')}
+          className="flex-1 bg-blue-500 text-white py-2 rounded hover:bg-blue-600"
+        >
+          Continue
+        </button>
+      </div>
+    </div>
+  );
 
-    return tax;
-  };
+  const renderDeductions = () => (
+    <div className="space-y-6">
+      <h2 className="text-xl font-semibold">Deductions</h2>
+      
+      <div className="grid grid-cols-2 gap-6">
+        <div className="space-y-4">
+          {Object.entries({
+            basicDeductions: ["Basic deductions - 80C", "Amount invested/paid in tax saving instruments such as PPF, ELSS mutual funds, LIC premium, etc. (max: 1.5L)"],
+            depositInterest: ["Interest from deposits - 80TTA", "Amount of interest income on deposits in savings account (includes fixed/recurring deposit interest in case of senior citizen)"],
+            medicalInsurance: ["Medical insurance - 80D", "Medical premium & preventive health checkup fees paid for self & family including parents"],
+            charityDonations: ["Donations to charity - 80G", "Amount paid as donation to charitable insitutions or certain recognized funds"]
+          }).map(([key, [label, tooltip]]) => (
+            <div key={key} className="space-y-1">
+              <div className="flex items-center gap-2">
+                <label className="text-gray-700">{label}</label>
+                <div className="relative group">
+                  <span className="cursor-help rounded-full bg-gray-200 px-2 py-0.5">i</span>
+                  <div className="absolute hidden group-hover:block bg-black text-white p-2 rounded w-64 text-sm z-10">
+                    {tooltip}
+                  </div>
+                </div>
+              </div>
+              <div className="relative">
+                <input
+                  type="number"
+                  name={key}
+                  value={deductionData[key]}
+                  onChange={handleDeductionChange}
+                  className="w-full p-2 border rounded"
+                />
+                <div className="absolute right-3 top-2">₹</div>
+              </div>
+            </div>
+          ))}
+        </div>
 
-  // Tax calculation logic for new regime
-  const calculateNewRegimeTax = (income) => {
-    let tax = 0;
-    if (income <= 700000) return 0; // Standard rebate
-    const taxable = income;
-    if (taxable <= 300000) tax = 0;
-    else if (taxable <= 600000) tax = (taxable - 300000) * 0.05;
-    else if (taxable <= 900000) tax = 15000 + (taxable - 600000) * 0.1;
-    else if (taxable <= 1200000) tax = 45000 + (taxable - 900000) * 0.15;
-    else if (taxable <= 1500000) tax = 90000 + (taxable - 1200000) * 0.2;
-    else tax = 150000 + (taxable - 1500000) * 0.3;
-    return tax;
-  };
+        <div className="space-y-4">
+          {Object.entries({
+            housingLoanInterest: ["Interest on housing loan - 80EEA", "Amount of interest paid on housing loan sanctioned during FY 2022-2023 (max: 1.5L)"],
+            npsEmployeeContribution: ["Employee's contribution to NPS - 80CCD", "Includes voluntary contribution to National Pension Scheme (NPS) under section 80CCD(1) and 80CCD(1B)"],
+            npsEmployerContribution: ["Employer's contribution to NPS - 80CCD(2)", "Amount of contributions made by employer to the National Pension Scheme (NPS) under Section 80CCD(2)"],
+            otherDeductions: ["Any other deduction", "Enter the deduction amount to be claimed under any other sections not listed above"]
+          }).map(([key, [label, tooltip]]) => (
+            <div key={key} className="space-y-1">
+              <div className="flex items-center gap-2">
+                <label className="text-gray-700">{label}</label>
+                <div className="relative group">
+                  <span className="cursor-help rounded-full bg-gray-200 px-2 py-0.5">i</span>
+                  <div className="absolute hidden group-hover:block bg-black text-white p-2 rounded w-64 text-sm z-10">
+                    {tooltip}
+                  </div>
+                </div>
+              </div>
+              <div className="relative">
+                <input
+                  type="number"
+                  name={key}
+                  value={deductionData[key]}
+                  onChange={handleDeductionChange}
+                  className="w-full p-2 border rounded"
+                />
+                <div className="absolute right-3 top-2">₹</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
-  // Calculate tax based on the selected regime
-  const calculateTax = () => {
-    const taxableIncome = calculateTaxableIncome();
-    const oldRegimeTax = calculateOldRegimeTax(taxableIncome);
-    const newRegimeTax = calculateNewRegimeTax(taxableIncome);
-    
-    setTaxResult({
-      oldRegimeTax,
-      newRegimeTax,
-      savings: Math.max(oldRegimeTax, newRegimeTax) - Math.min(oldRegimeTax, newRegimeTax)
-    });
-  };
+      <div className="flex gap-4">
+        <button
+          onClick={() => setActiveSection('income')}
+          className="flex-1 bg-gray-500 text-white py-2 rounded hover:bg-gray-600"
+        >
+          Back
+        </button>
+        <button
+          onClick={() => {
+            setTaxResult(true);
+            setShowComparison(true);
+          }}
+          className="flex-1 bg-green-500 text-white py-2 rounded hover:bg-green-600"
+        >
+          Calculate
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="max-w-4xl mx-auto p-4">
       <div className="bg-white rounded-lg shadow-2xl p-6">
         <h1 className="text-3xl font-bold text-center mb-8 text-blue-600">Income Tax Calculator</h1>
-        {/* Regime Toggle */}
+        
         <div className="flex gap-4 mb-6">
-          <button
-            onClick={() => setRegime('old')}
-            className={`px-4 py-2 ${regime === 'old' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-          >
-            Old Regime
-          </button>
-          <button
-            onClick={() => setRegime('new')}
-            className={`px-4 py-2 ${regime === 'new' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-          >
-            New Regime
-          </button>
+          {['basic', 'income', 'deductions'].map((section) => (
+            <button
+              key={section}
+              onClick={() => setActiveSection(section)}
+              className={`px-4 py-2 ${activeSection === section ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+            >
+              {section.charAt(0).toUpperCase() + section.slice(1)} Details
+            </button>
+          ))}
         </div>
 
-        {/* Age Group Dropdown */}
-        <select 
-          value={ageGroup} 
-          onChange={(e) => setAgeGroup(e.target.value)}
-          className="mb-6 p-2 border"
-        >
-          <option value="below60">Below 60</option>
-          <option value="between60and80">60-80</option>
-          <option value="above80">Above 80</option>
-        </select>
-
-        {/* Income/Deduction Tabs */}
-        <div className="flex gap-4 mb-6">
-          <button
-            onClick={() => setActiveTab('income')}
-            className={`px-4 py-2 ${activeTab === 'income' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-          >
-            Income
-          </button>
-          <button
-            onClick={() => setActiveTab('deductions')}
-            className={`px-4 py-2 ${activeTab === 'deductions' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-          >
-            Deductions
-          </button>
-        </div>
-
-        {/* Dynamic Form Fields */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          {activeTab === 'income' ? (
-            <>
-              <input type="number" name="salaryIncome" placeholder="Salary Income" onChange={handleIncomeChange} className="p-2 border" />
-              <input type="number" name="interestIncome" placeholder="Interest Income" onChange={handleIncomeChange} className="p-2 border" />
-              <input type="number" name="rentalIncome" placeholder="Rental Income" onChange={handleIncomeChange} className="p-2 border" />
-              <input type="number" name="digitalAssetsIncome" placeholder="Digital Assets Income" onChange={handleIncomeChange} className="p-2 border" />
-              <input type="number" name="homeLoanInterestSelf" placeholder="Home Loan Interest (Self)" onChange={handleIncomeChange} className="p-2 border" />
-              <input type="number" name="homeLoanInterestLetOut" placeholder="Home Loan Interest (Let Out)" onChange={handleIncomeChange} className="p-2 border" />
-              <input type="number" name="otherIncome" placeholder="Other Income" onChange={handleIncomeChange} className="p-2 border" />
-            </>
-          ) : (
-            <>
-              <input type="number" name="basicDeductions" placeholder="80C Deductions" onChange={handleDeductionChange} className="p-2 border" />
-              <input type="number" name="medicalInsurance" placeholder="80D Deductions" onChange={handleDeductionChange} className="p-2 border" />
-              <input type="number" name="housingLoanInterest" placeholder="80EEA Deductions" onChange={handleDeductionChange} className="p-2 border" />
-              <input type="number" name="npsEmployerContribution" placeholder="NPS Employer Contribution" onChange={handleDeductionChange} className="p-2 border" />
-              <input type="number" name="npsInterest" placeholder="80TTA Deductions" onChange={handleDeductionChange} className="p-2 border" />
-              <input type="number" name="charityDonations" placeholder="80G Deductions" onChange={handleDeductionChange} className="p-2 border" />
-              <input type="number" name="npsEmployeeContribution" placeholder="NPS Employee Contribution" onChange={handleDeductionChange} className="p-2 border" />
-              <input type="number" name="otherDeductions" placeholder="Other Deductions" onChange={handleDeductionChange} className="p-2 border" />
-            </>
-          )}
-        </div>
-
-        {/* Results and Recalculate */}
-        {taxResult && (
+        {activeSection === 'basic' && renderBasicDetails()}
+        {activeSection === 'income' && renderIncomeDetails()}
+        {activeSection === 'deductions' && renderDeductions()}
+        
+        {taxResult && showComparison && (
           <div className="mt-6 p-4 bg-gray-100">
             <h3 className="text-xl mb-4">Tax Comparison</h3>
-            <p>Old Regime Tax: ₹{taxResult.oldRegimeTax.toFixed(2)}</p>
-            <p>New Regime Tax: ₹{taxResult.newRegimeTax.toFixed(2)}</p>
-            <p>Savings: ₹{taxResult.savings.toFixed(2)}</p>
-            <button 
-              onClick={() => setTaxResult(null)} 
-              className="mt-4 bg-blue-500 text-white px-4 py-2 hover:bg-blue-600"
-            >
-              Recalculate
-            </button>
+            {/* Bar chart would go here */}
+            <div className="h-64 bg-white p-4 rounded">
+              Bar Chart Placeholder
+            </div>
           </div>
         )}
-
-        <button 
-          onClick={calculateTax} 
-          className="bg-green-500 text-white px-6 py-3 hover:bg-green-600"
-        >
-          Calculate Tax
-        </button>
       </div>
     </div>
   );
